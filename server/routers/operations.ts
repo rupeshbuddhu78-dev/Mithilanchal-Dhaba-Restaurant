@@ -1,12 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import { auditEvents, categories, menuItems, notifications, orderStatusHistory, orders, restaurantSettings, riderAssignments, riderProfiles, users } from "../../drizzle/schema";
+import { auditEvents, categories, menuItems, notifications, orderItems, orderStatusHistory, orders, restaurantSettings, riderAssignments, riderProfiles, users } from "../../drizzle/schema";
 import { ORDER_STATUS_LABELS, ORDER_TRANSITIONS, ORDER_STATUSES } from "../../shared/restaurant";
 import { requireOperationsRole, requireRole } from "../guards";
 import { getDb } from "../db";
 import { ensureRestaurantSeed } from "../seed";
-import { uploadCloudinaryImage } from "../cloudinary";
+import { cloudinaryPublicIdFromUrl, destroyCloudinaryImage, uploadCloudinaryImage } from "../cloudinary";
+import { hashPassword } from "../passwordAuth";
+import { localOpenId } from "../passwordAuth";
+import { hasPersistedMediaReference } from "../mediaSafety";
 import { protectedProcedure, router } from "../_core/trpc";
 
 async function requiredDb() { const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database is unavailable." }); return db; }
@@ -37,6 +40,14 @@ export const operationsRouter = router({
     }),
     orders: protectedProcedure.query(async ({ ctx }) => { requireOperationsRole(ctx); return (await requiredDb()).select().from(orders).orderBy(desc(orders.createdAt)).limit(100); }),
     customers: protectedProcedure.query(async ({ ctx }) => { requireOperationsRole(ctx); return (await requiredDb()).select({ id: users.id, name: users.name, email: users.email, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn }).from(users).where(eq(users.role, "customer")).orderBy(desc(users.createdAt)).limit(100); }),
+    riders: protectedProcedure.query(async ({ ctx }) => { requireOperationsRole(ctx); return (await requiredDb()).select({ id: users.id, name: users.name, email: users.email, phone: users.phone, createdAt: users.createdAt }).from(users).where(eq(users.role, "rider")).orderBy(desc(users.createdAt)).limit(100); }),
+    provisionRider: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(160), email: z.string().trim().email().max(320), phone: z.string().trim().min(7).max(30), password: z.string().min(12).max(200) })).mutation(async ({ ctx, input }) => {
+      requireRole(ctx, ["admin"]); const db = await requiredDb(); const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email.toLowerCase())).limit(1);
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
+      const email = input.email.toLowerCase(); const passwordHash = await hashPassword(input.password); const inserted = await db.insert(users).values({ openId: localOpenId(email), name: input.name, email, phone: input.phone, role: "rider", passwordHash, loginMethod: "password" });
+      const riderUserId = Number(inserted[0].insertId); await db.insert(riderProfiles).values({ userId: riderUserId, displayName: input.name });
+      await db.insert(auditEvents).values({ actorUserId: ctx.user.id, action: "rider.provisioned", resourceType: "user", resourceId: String(riderUserId), metadata: { email: input.email.toLowerCase() } }); return { success: true, riderUserId };
+    }),
     updateStatus: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), status: orderStatus, note: z.string().trim().max(500).optional() })).mutation(({ ctx, input }) => { requireOperationsRole(ctx); return changeStatus(input, ctx.user.id); }),
     assignRider: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), riderUserId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       requireOperationsRole(ctx); const db = await requiredDb();
@@ -56,6 +67,7 @@ export const operationsRouter = router({
         if (id) await db.update(menuItems).set(values).where(eq(menuItems.id, id)); else await db.insert(menuItems).values(values);
         return { success: true };
       }),
+      archive: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { requireOperationsRole(ctx); await (await requiredDb()).update(menuItems).set({ isAvailable: false, isFeatured: false }).where(eq(menuItems.id, input.id)); return { success: true }; }),
     }),
     categories: router({
       save: protectedProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(2).max(120), slug: z.string().trim().min(2).max(160), description: z.string().trim().max(1200).nullable().optional(), imageUrl: z.string().trim().max(2000).nullable().optional(), sortOrder: z.number().int().min(0).max(10000), isActive: z.boolean() })).mutation(async ({ ctx, input }) => {
@@ -63,6 +75,7 @@ export const operationsRouter = router({
         if (id) await db.update(categories).set(values).where(eq(categories.id, id)); else await db.insert(categories).values(values);
         return { success: true };
       }),
+      archive: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { requireOperationsRole(ctx); await (await requiredDb()).update(categories).set({ isActive: false }).where(eq(categories.id, input.id)); return { success: true }; }),
     }),
     settings: router({
       get: protectedProcedure.query(async ({ ctx }) => { requireOperationsRole(ctx); const [settings] = await (await requiredDb()).select().from(restaurantSettings).limit(1); return settings ?? null; }),
@@ -75,6 +88,21 @@ export const operationsRouter = router({
         const uploaded = await uploadCloudinaryImage({ dataUrl: input.dataUrl, folder: `mithilanchal-dhaba/${input.folder}` });
         await (await requiredDb()).insert(auditEvents).values({ actorUserId: ctx.user.id, action: "media.uploaded", resourceType: "cloudinary", resourceId: uploaded.publicId || uploaded.url, metadata: { folder: input.folder } });
         return uploaded;
+      }),
+      deleteImage: protectedProcedure.input(z.object({ publicId: z.string().trim().min(1).max(512).optional(), url: z.string().url().max(2000) })).mutation(async ({ ctx, input }) => {
+        requireRole(ctx, ["admin"]);
+        const publicId = input.publicId || cloudinaryPublicIdFromUrl(input.url);
+        if (!publicId?.startsWith("mithilanchal-dhaba/")) throw new TRPCError({ code: "FORBIDDEN", message: "Only Mithilanchal Dhaba media can be deleted." });
+        const db = await requiredDb(); const [settings] = await db.select({ logoUrl: restaurantSettings.logoUrl, heroImageUrl: restaurantSettings.heroImageUrl }).from(restaurantSettings).limit(1);
+        const [categoryReference, menuReference, historicalOrderReference] = await Promise.all([
+          db.select({ id: categories.id }).from(categories).where(eq(categories.imageUrl, input.url)).limit(1),
+          db.select({ id: menuItems.id }).from(menuItems).where(eq(menuItems.imageUrl, input.url)).limit(1),
+          db.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.imageUrlSnapshot, input.url)).limit(1),
+        ]);
+        if (hasPersistedMediaReference({ targetUrl: input.url, settingsUrls: [settings?.logoUrl, settings?.heroImageUrl], categoryReferenced: Boolean(categoryReference[0]), menuReferenced: Boolean(menuReference[0]), orderSnapshotReferenced: Boolean(historicalOrderReference[0]) })) throw new TRPCError({ code: "CONFLICT", message: "This image is still used by restaurant content or order history and cannot be deleted." });
+        await destroyCloudinaryImage(publicId);
+        await db.insert(auditEvents).values({ actorUserId: ctx.user.id, action: "media.deleted", resourceType: "cloudinary", resourceId: publicId, metadata: { url: input.url } });
+        return { success: true };
       }),
     }),
   }),

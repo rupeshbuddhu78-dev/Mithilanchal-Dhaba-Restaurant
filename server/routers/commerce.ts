@@ -7,6 +7,7 @@ import { ORDER_STATUS_LABELS } from "../../shared/restaurant";
 import { calculateOptionDelta, calculateOrderTotals, type SelectedOption } from "../checkout";
 import { getDb } from "../db";
 import { createCashfreeOrder, getCashfreeConfig, getCashfreeOrder, getCashfreePayments } from "../cashfree";
+import { isCashfreeRetryEligible } from "../cashfreeState";
 import { notifyOwner } from "../_core/notification";
 import { buildCheckoutMetadata } from "../payment";
 import { protectedProcedure, router } from "../_core/trpc";
@@ -149,16 +150,37 @@ export const commerceRouter = router({
         const remote = await getCashfreeOrder(input.providerOrderId);
         if (remote.order_status === "PAID") {
           await db.update(paymentAttempts).set({ status: "paid" }).where(eq(paymentAttempts.id, attempt.id));
-          await db.update(orders).set({ paymentStatus: "paid", status: "placed" }).where(eq(orders.id, attempt.orderId));
+          await db.update(orders).set({ paymentStatus: "paid" }).where(eq(orders.id, attempt.orderId));
+          await db.update(orders).set({ status: "placed" }).where(and(eq(orders.id, attempt.orderId), eq(orders.status, "pending_payment")));
         } else if (remote.order_status === "EXPIRED") {
           await db.update(paymentAttempts).set({ status: "expired" }).where(eq(paymentAttempts.id, attempt.id));
-          await db.update(orders).set({ paymentStatus: "failed", status: "cancelled" }).where(eq(orders.id, attempt.orderId));
+          await db.update(orders).set({ paymentStatus: "failed" }).where(and(eq(orders.id, attempt.orderId), eq(orders.status, "pending_payment")));
         } else {
           const payments = await getCashfreePayments(input.providerOrderId);
-          if (payments.some(payment => payment.payment_status?.toUpperCase() === "FAILED")) await db.update(paymentAttempts).set({ status: "failed" }).where(eq(paymentAttempts.id, attempt.id));
+          const latest = payments.at(-1)?.payment_status?.toUpperCase();
+          if (latest === "FAILED" || latest === "CANCELLED") {
+            await db.update(paymentAttempts).set({ status: latest === "CANCELLED" ? "cancelled" : "failed" }).where(eq(paymentAttempts.id, attempt.id));
+            await db.update(orders).set({ paymentStatus: "failed" }).where(and(eq(orders.id, attempt.orderId), eq(orders.status, "pending_payment")));
+          }
         }
         const [order] = await db.select().from(orders).where(and(eq(orders.id, attempt.orderId), eq(orders.userId, ctx.user.id))).limit(1);
         return { orderId: attempt.orderId, paymentStatus: order?.paymentStatus ?? "pending", orderStatus: order?.status ?? "pending_payment" };
+      }),
+      retry: protectedProcedure.input(z.object({ orderId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const db = await requiredDb();
+        const [order] = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, ctx.user.id), eq(orders.paymentMethod, "cashfree"))).limit(1);
+        if (!order) throw new TRPCError({ code: "NOT_FOUND", message: "Cashfree order not found." });
+        const [latestAttempt] = await db.select().from(paymentAttempts).where(and(eq(paymentAttempts.orderId, order.id), eq(paymentAttempts.userId, ctx.user.id), eq(paymentAttempts.provider, "cashfree"))).orderBy(desc(paymentAttempts.createdAt)).limit(1);
+        if (!isCashfreeRetryEligible(order, latestAttempt?.status)) throw new TRPCError({ code: "BAD_REQUEST", message: "The order is not eligible for a payment retry yet." });
+        const config = getCashfreeConfig();
+        if (!config) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Cashfree online payment is not configured yet." });
+        const providerOrderId = `MD-CF-${nanoid(20)}`; const idempotencyKey = `md-cf-${nanoid(24)}`; const snapshot = order.deliveryAddressSnapshot as { phone?: string }; const origin = ctx.req.headers.origin ?? `${ctx.req.protocol}://${ctx.req.get("host")}`;
+        const remote = await createCashfreeOrder({ providerOrderId, idempotencyKey, amountPaise: order.grandTotalPaise, customerId: `user_${ctx.user.id}`, name: ctx.user.name, email: ctx.user.email, phone: snapshot.phone || "", returnUrl: `${origin}/payment/cashfree/return?provider_order_id=${providerOrderId}` });
+        if (!remote.payment_session_id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Cashfree did not return a payment session. Please try again." });
+        await db.insert(paymentAttempts).values({ orderId: order.id, userId: ctx.user.id, provider: "cashfree", providerOrderId, paymentSessionId: remote.payment_session_id, status: "pending", amountPaise: order.grandTotalPaise, idempotencyKey });
+        await db.update(orders).set({ status: "pending_payment", paymentStatus: "pending" }).where(eq(orders.id, order.id));
+        if (order.status !== "pending_payment") await db.insert(orderStatusHistory).values({ orderId: order.id, status: "pending_payment", note: "Customer started a new secure payment attempt.", actorUserId: ctx.user.id });
+        return { orderId: order.id, orderNo: order.orderNo, paymentSessionId: remote.payment_session_id, cashfreeEnvironment: config.environment, providerOrderId };
       }),
     }),
   }),

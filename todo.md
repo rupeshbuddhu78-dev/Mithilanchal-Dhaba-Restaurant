@@ -45,5 +45,11 @@
 - [ ] Implement a secure server-side Cashfree online-payment lifecycle with verified webhook processing, payment synchronization, idempotency, retry handling, and preserved COD flow without altering the current database architecture.
 - [x] Create, review, apply, and verify a backward-compatible additive TiDB migration for Cashfree references and secure customer/rider credentials without deleting or changing existing records.
 - [ ] Replace the production-only Manus OAuth dependency for customers and riders with secure self-contained registration/login/session flows and server-side role authorization without altering the current database architecture.
-- [ ] Implement secure Cloudinary media upload/replacement controls for authorized administrators and remove broken production Manus-storage references without altering the current database architecture.
-- [ ] Complete missing high-priority administrator controls for safe menu/category operations, order/rider visibility, and settings management without breaking historical orders.
+- [x] Implement secure Cloudinary media upload/replacement controls for authorized administrators and remove broken production Manus-storage references without altering the current database architecture.
+- [x] Complete missing high-priority administrator controls for safe menu/category operations, order/rider visibility, and settings management without breaking historical orders.
+- [x] Add administrator menu image upload/replacement using Cloudinary and persist only the returned secure URL.
+- [x] Add non-destructive category archive and full menu create/edit/archive controls to the administrator UI.
+- [x] Complete safe referenced-media replacement cleanup so an old Cloudinary asset is deleted only after the replacement URL is saved and no database record still references it.
+- [x] Preserve existing menu customisation data during administrator menu edits.
+- [x] Block Cloudinary deletion when an image is referenced by a historical order item snapshot.
+- [x] Add focused regression coverage for safe menu edits and image-reference deletion blocking.

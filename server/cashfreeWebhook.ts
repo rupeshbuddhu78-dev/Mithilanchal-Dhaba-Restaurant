@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import type { Express, Request, Response } from "express";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { orders, paymentAttempts, paymentWebhookEvents } from "../drizzle/schema";
 import { cashfreeEventIdentity, getCashfreeOrder, getCashfreePayments, verifyCashfreeWebhookSignature } from "./cashfree";
 import { getDb } from "./db";
@@ -18,17 +18,21 @@ async function synchroniseCashfreeAttempt(providerOrderId: string, eventId: stri
   const remoteOrder = await getCashfreeOrder(providerOrderId);
   if (remoteOrder.order_status === "PAID") {
     await db.update(paymentAttempts).set({ status: "paid" }).where(eq(paymentAttempts.id, attempt.id));
-    await db.update(orders).set({ paymentStatus: "paid", status: "placed" }).where(eq(orders.id, attempt.orderId));
+    await db.update(orders).set({ paymentStatus: "paid" }).where(eq(orders.id, attempt.orderId));
+    await db.update(orders).set({ status: "placed" }).where(and(eq(orders.id, attempt.orderId), eq(orders.status, "pending_payment")));
     return;
   }
   if (remoteOrder.order_status === "EXPIRED") {
     await db.update(paymentAttempts).set({ status: "expired" }).where(eq(paymentAttempts.id, attempt.id));
-    await db.update(orders).set({ paymentStatus: "failed", status: "cancelled" }).where(eq(orders.id, attempt.orderId));
+    await db.update(orders).set({ paymentStatus: "failed" }).where(and(eq(orders.id, attempt.orderId), eq(orders.status, "pending_payment")));
     return;
   }
   const payments = await getCashfreePayments(providerOrderId);
   const latest = payments.at(-1)?.payment_status?.toUpperCase();
-  if (latest === "FAILED") await db.update(paymentAttempts).set({ status: "failed" }).where(eq(paymentAttempts.id, attempt.id));
+  if (latest === "FAILED" || latest === "CANCELLED") {
+    await db.update(paymentAttempts).set({ status: latest === "CANCELLED" ? "cancelled" : "failed" }).where(eq(paymentAttempts.id, attempt.id));
+    await db.update(orders).set({ paymentStatus: "failed" }).where(and(eq(orders.id, attempt.orderId), eq(orders.status, "pending_payment")));
+  }
 }
 
 export function registerCashfreeWebhook(app: Express) {
