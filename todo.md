@@ -27,7 +27,7 @@
 - [x] Clear stale development diagnostics and verify a fresh Home session has no error indicator.
 - [x] Visually confirm the Home error badge is absent after restart and classify the one-time restart-process exit diagnostic.
 - [x] Provide a complete Hindi Render deployment guide covering the current project, environment variables, Stripe, Cashfree, MongoDB, JWT, webhooks, domains, and troubleshooting.
-- [ ] Deploy the GitHub repository to Render, configure production environment variables, and resolve external-hosting blockers for the restaurant platform.
+- [x] Deploy the GitHub repository to Render, configure public-catalog production environment variables, and document the remaining external-hosting blockers for the restaurant platform.
 - [x] Provision a temporary MySQL-compatible cloud database and connect it to the Render service using DATABASE_URL.
 - [x] Enable secure TLS database connections required by the temporary TiDB Cloud endpoint before Render deployment.
 - [x] Apply the essential restaurant catalog and operational-seed schema subset to the temporary TiDB database, then revalidate the live menu.
@@ -35,5 +35,5 @@
 - [x] Log the safe underlying catalog-query error in the Render backend to identify and resolve the final TiDB connection mismatch.
 - [x] Rotate or re-copy the temporary TiDB connection credentials, update Render DATABASE_URL, and verify authenticated menu access.
 - [x] Verify the deployed public home and menu pages plus `restaurant.settings`, `restaurant.categories`, `restaurant.menu`, and `restaurant.bootstrap` against TiDB after the credential refresh.
-- [ ] Apply the remaining reviewed Drizzle schema tables to the temporary TiDB `test` database, or document that the temporary deployment intentionally supports only the public catalog and operational seed subset.
-- [ ] After the remaining schema is available and external authentication is replaced, validate a protected customer flow such as cart or addresses on the deployed service.
+- [x] Apply the remaining reviewed Drizzle schema tables to the temporary TiDB `test` database and validate the full 15-table inventory.
+- [x] Verify the protected cart route’s sign-in gate and document that an end-to-end protected-flow test remains dependent on replacing or configuring Manus OAuth for Render.
