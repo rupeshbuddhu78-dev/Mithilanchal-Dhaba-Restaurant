@@ -1,33 +1,22 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import { FoodCard } from "@/components/FoodCard";
+import { StorefrontLayout } from "@/components/StorefrontLayout";
+import { trpc } from "@/lib/trpc";
+import { ArrowRight, Clock3, MapPin, ShieldCheck, SlidersHorizontal, Truck } from "lucide-react";
+import { useEffect } from "react";
+import { Link } from "wouter";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
-  // startLogin() during render (no href={startLogin()}) — it mints a one-time
-  // nonce cookie and must run only at the moment of navigation.
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
-
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
-    </div>
-  );
+  const utils = trpc.useUtils();
+  const bootstrap = trpc.restaurant.bootstrap.useMutation({ onSuccess: () => { utils.restaurant.settings.invalidate(); utils.restaurant.categories.invalidate(); utils.restaurant.menu.invalidate(); } });
+  const settings = trpc.restaurant.settings.useQuery();
+  const categories = trpc.restaurant.categories.useQuery();
+  const featured = trpc.restaurant.menu.useQuery({ featured: true });
+  useEffect(() => { bootstrap.mutate(); }, []);
+  const restaurant = settings.data;
+  return <StorefrontLayout><main>
+    <section className="overflow-hidden"><div className="container grid min-h-[590px] items-center gap-10 py-10 lg:grid-cols-[1.02fr_.98fr] lg:py-16"><div className="relative z-10"><p className="eyebrow">Mithilanchal Dhaba · Kaludewan</p><h1 className="mt-4 max-w-2xl font-serif text-5xl font-semibold leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl">{restaurant?.heroHeading || "Comforting Indian flavours, served with care."}</h1><p className="mt-6 max-w-xl text-base leading-7 text-[#6e6254]">{restaurant?.heroSubtitle || "Explore a thoughtful menu, customise your order, and follow every step from kitchen to doorstep."}</p><div className="mt-8 flex flex-wrap gap-3"><Link href="/menu" className="inline-flex items-center gap-2 rounded-full bg-[#ae3f25] px-6 py-3 text-sm font-extrabold text-white transition hover:bg-[#8e301b]">Order from the menu <ArrowRight className="h-4 w-4" /></Link><Link href="/about" className="rounded-full border border-[#272119]/15 bg-white px-6 py-3 text-sm font-extrabold transition hover:border-[#272119]">Our story</Link></div><div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 text-xs font-bold text-[#5f5345]"><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#ae3f25]" />Secure online checkout</span><span className="flex items-center gap-2"><Truck className="h-4 w-4 text-[#ae3f25]" />Track delivery progress</span></div></div><div className="relative"><div className="absolute -inset-8 rounded-full bg-[#e8b886]/35 blur-3xl" /><div className="relative overflow-hidden rounded-[2rem] bg-[#e9d6bd] p-3 shadow-[0_30px_70px_-30px_rgba(55,35,16,0.55)]"><img src={restaurant?.heroImageUrl || "/manus-storage/thali_2c14c9ac.jpg"} alt="A generous Indian thali from Mithilanchal Dhaba" className="h-[430px] w-full rounded-[1.4rem] object-cover sm:h-[500px]" /><div className="absolute bottom-7 left-7 rounded-2xl bg-[#fffaf2]/95 p-4 shadow-lg backdrop-blur"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#ae3f25]">The house table</p><p className="mt-1 font-serif text-xl font-semibold">Made for unhurried meals</p></div></div></div></div></section>
+    <section className="border-y border-[#272119]/8 bg-[#f2e8d7] py-8"><div className="container"><div className="flex flex-wrap items-center justify-between gap-5"><div><p className="eyebrow">Find your favourite</p><p className="mt-1 font-serif text-2xl font-semibold">Browse by appetite</p></div><Link href="/menu" className="inline-flex items-center gap-2 rounded-full border border-[#272119]/15 bg-white px-4 py-2 text-xs font-bold">View all menu <ArrowRight className="h-3.5 w-3.5" /></Link></div><div className="mt-5 grid gap-3 sm:grid-cols-3">{categories.data?.map(category => <Link key={category.id} href={`/menu/${category.slug}`} className="group flex items-center gap-3 rounded-2xl border border-[#272119]/8 bg-[#fffaf2] p-3 transition hover:-translate-y-0.5"><img src={category.imageUrl || "/manus-storage/thali_2c14c9ac.jpg"} alt="" className="h-12 w-12 rounded-xl object-cover" /><span className="flex-1 text-sm font-bold">{category.name}</span><ArrowRight className="h-4 w-4 text-[#ae3f25] transition group-hover:translate-x-0.5" /></Link>)}</div></div></section>
+    <section className="container py-16"><div className="flex items-end justify-between gap-4"><div><p className="eyebrow">A little closer</p><h2 className="mt-2 font-serif text-4xl font-semibold tracking-tight">Popular at the table</h2></div><Link href="/menu" className="hidden items-center gap-2 text-sm font-extrabold text-[#ae3f25] sm:inline-flex">Explore menu <ArrowRight className="h-4 w-4" /></Link></div>{featured.isError ? <div className="mt-8 rounded-3xl border border-[#ae3f25]/25 bg-[#fff0e9] p-6 text-sm">We could not load featured dishes. <button onClick={() => featured.refetch()} className="ml-2 font-bold text-[#ae3f25]">Try again</button></div> : <><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{featured.data?.map(({ item }) => <FoodCard key={item.id} item={item} />)}</div>{featured.isLoading && <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[1, 2, 3].map(n => <div key={n} className="h-80 animate-pulse rounded-[1.35rem] bg-[#ede4d7]" />)}</div>}</>}</section>
+    <section className="container pb-16"><div className="grid overflow-hidden rounded-[2rem] bg-[#272119] text-[#fff8ef] lg:grid-cols-[1.1fr_.9fr]"><div className="p-8 sm:p-12"><p className="text-xs font-bold uppercase tracking-[0.22em] text-[#d99b69]">An easier order, every time</p><h2 className="mt-4 max-w-xl font-serif text-4xl font-semibold leading-tight">The full restaurant experience, thoughtfully simplified.</h2><div className="mt-8 grid gap-5 sm:grid-cols-3">{[[SlidersHorizontal,"Make it yours","Clear customisation choices, just where you need them."],[Clock3,"Follow each step","A live timeline keeps the kitchen and delivery journey visible."],[MapPin,"Delivered with context","Address details and rider progress stay with your order."]].map(([Icon, title, copy]) => { const I = Icon as typeof SlidersHorizontal; return <div key={String(title)}><I className="h-5 w-5 text-[#d99b69]" /><p className="mt-3 text-sm font-bold">{String(title)}</p><p className="mt-2 text-xs leading-5 text-[#fff8ef]/60">{String(copy)}</p></div>; })}</div></div><div className="min-h-72 bg-[url('/manus-storage/paneer-makhani_9a68ebdd.jpg')] bg-cover bg-center"><div className="flex h-full items-end bg-gradient-to-t from-black/45 to-transparent p-7"><Link href="/menu" className="flex items-center gap-2 rounded-full bg-[#fff8ef] px-5 py-3 text-sm font-extrabold text-[#272119]">Explore the menu <ArrowRight className="h-4 w-4" /></Link></div></div></div></section>
+  </main></StorefrontLayout>;
 }

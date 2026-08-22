@@ -5,12 +5,43 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Menu from "./pages/Menu";
+import Product from "./pages/Product";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
+import Profile from "./pages/Profile";
+import StaticInfo from "./pages/StaticInfo";
+import Admin from "./pages/Admin";
+import Rider from "./pages/Rider";
+import Addresses from "./pages/Addresses";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/menu/:category"} component={Menu} />
+      <Route path={"/menu"} component={Menu} />
+      <Route path={"/product/:slug"} component={Product} />
+      <Route path={"/cart"} component={Cart} />
+      <Route path={"/checkout"} component={Checkout} />
+      <Route path={"/order-success/:orderId"} component={OrderDetail} />
+      <Route path={"/orders/:orderId"} component={OrderDetail} />
+      <Route path={"/orders"} component={Orders} />
+      <Route path={"/profile"} component={Profile} />
+      <Route path={"/profile/addresses"} component={Addresses} />
+      <Route path={"/about"} component={StaticInfo} />
+      <Route path={"/contact"} component={StaticInfo} />
+      <Route path={"/privacy-policy"} component={StaticInfo} />
+      <Route path={"/terms"} component={StaticInfo} />
+      <Route path={"/refund-policy"} component={StaticInfo} />
+      <Route path={"/shipping-delivery-policy"} component={StaticInfo} />
+      <Route path={"/admin/:section"} component={Admin} />
+      <Route path={"/admin"} component={Admin} />
+      <Route path={"/rider/:section"} component={Rider} />
+      <Route path={"/rider"} component={Rider} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

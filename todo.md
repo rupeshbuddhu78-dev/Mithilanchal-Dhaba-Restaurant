@@ -1,0 +1,25 @@
+# Project TODO
+
+- [x] Model database entities for restaurant configuration, categories, menu items, customisation choices, customer profiles, addresses, carts, orders, order items, status history, rider profiles, rider assignments, notifications, coupons, and audit events.
+- [x] Extend user roles to support customer, administrator, staff, and rider access with server-side guards.
+- [x] Build tRPC procedures for public restaurant content, searchable menu data, cart operations, address book management, checkout, order tracking, customer history, administration, and rider tasks.
+- [x] Add secure Stripe Checkout architecture, payment-status verification, webhook guidance, and cash-on-delivery support.
+- [x] Build a premium responsive customer storefront with home, menu, category, product, search, cart, checkout, order confirmation, order tracking, profile, addresses, and order-history views.
+- [x] Create accessible item-customisation, validation, loading, empty, and error states throughout the customer flow.
+- [x] Create an admin dashboard for category and menu management, live order handling, customer overview, operations reporting, and restaurant configuration.
+- [x] Create a role-protected rider workspace for assigned jobs, pickup and delivery state updates, delivery progress, location context, and route direction links.
+- [x] Add event-triggered customer and staff notification records for order placement and meaningful order-status transitions.
+- [x] Add dynamic SEO metadata, robots rules, sitemap support, canonical URLs, and truthful LocalBusiness/Restaurant structured data that omits unknown fields.
+- [x] Provide high-quality, editable seed menu data and safe order samples without invented reviews, ratings, testimonials, phone numbers, schedules, or coordinates.
+- [x] Add focused Vitest coverage for role rules, cart total calculations, order-status policy, and payment/session validations.
+- [x] Write setup, database, Stripe environment, webhook, notification, architecture, and deployment documentation.
+- [x] Verify the desktop and mobile interfaces, resolve build/type/test issues, and package the complete source project as a ZIP archive.
+- [x] Add a dedicated customer addresses page and profile route, including create, edit, default, and delete controls.
+- [x] Add explicit error states to customer queries and remove render-phase navigation from checkout.
+- [x] Add restaurant settings and category management controls to the admin workspace.
+- [x] Add a dynamic sitemap.xml endpoint and reference it from robots.txt.
+- [x] Add safe, clearly labelled operational sample orders and rider assignments without invented customer identities or reviews.
+- [x] Add Vitest coverage for legal order-status transitions and payment-session/webhook safety behavior.
+- [x] Add explicit query error states to the remaining public customer pages.
+- [x] Seed a clearly labelled sample rider profile and assignment for the operational sample order.
+- [x] Add focused unit coverage for Stripe webhook test-event acknowledgement and invalid-signature rejection paths.
