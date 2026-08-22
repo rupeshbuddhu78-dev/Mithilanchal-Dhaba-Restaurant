@@ -26,3 +26,4 @@
 - [x] Investigate and resolve the two error indicators displayed beside the Home page in the development interface.
 - [x] Clear stale development diagnostics and verify a fresh Home session has no error indicator.
 - [x] Visually confirm the Home error badge is absent after restart and classify the one-time restart-process exit diagnostic.
+- [x] Provide a complete Hindi Render deployment guide covering the current project, environment variables, Stripe, Cashfree, MongoDB, JWT, webhooks, domains, and troubleshooting.
