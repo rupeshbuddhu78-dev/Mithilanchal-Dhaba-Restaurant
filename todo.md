@@ -24,4 +24,5 @@
 - [x] Seed a clearly labelled sample rider profile and assignment for the operational sample order.
 - [x] Add focused unit coverage for Stripe webhook test-event acknowledgement and invalid-signature rejection paths.
 - [x] Investigate and resolve the two error indicators displayed beside the Home page in the development interface.
-- [ ] Clear stale development diagnostics and verify a fresh Home session has no error indicator.
+- [x] Clear stale development diagnostics and verify a fresh Home session has no error indicator.
+- [x] Visually confirm the Home error badge is absent after restart and classify the one-time restart-process exit diagnostic.
