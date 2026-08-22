@@ -16,6 +16,8 @@ import StaticInfo from "./pages/StaticInfo";
 import Admin from "./pages/Admin";
 import Rider from "./pages/Rider";
 import Addresses from "./pages/Addresses";
+import CashfreeReturn from "./pages/CashfreeReturn";
+import AccountAuth from "./pages/AccountAuth";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -27,6 +29,8 @@ function Router() {
       <Route path={"/product/:slug"} component={Product} />
       <Route path={"/cart"} component={Cart} />
       <Route path={"/checkout"} component={Checkout} />
+      <Route path={"/login"} component={AccountAuth} />
+      <Route path={"/payment/cashfree/return"} component={CashfreeReturn} />
       <Route path={"/order-success/:orderId"} component={OrderDetail} />
       <Route path={"/orders/:orderId"} component={OrderDetail} />
       <Route path={"/orders"} component={Orders} />

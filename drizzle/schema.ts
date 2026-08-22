@@ -6,6 +6,7 @@ export const users = mysqlTable("users", {
   name: text("name"), email: varchar("email", { length: 320 }), loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["customer", "admin", "staff", "rider"]).default("customer").notNull(),
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
+  passwordHash: varchar("passwordHash", { length: 255 }), phone: varchar("phone", { length: 30 }), isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(), lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 export type User = typeof users.$inferSelect;
@@ -48,11 +49,22 @@ export const cartItems = mysqlTable("cart_items", {
 export const orders = mysqlTable("orders", {
   id: int("id").autoincrement().primaryKey(), orderNo: varchar("orderNo", { length: 32 }).notNull().unique(), userId: int("userId").notNull(),
   status: mysqlEnum("orderStatus", ["pending_payment", "placed", "accepted", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery", "delivered", "cancelled"]).notNull(),
-  paymentMethod: mysqlEnum("paymentMethod", ["cod", "stripe"]).notNull(), paymentStatus: mysqlEnum("paymentStatus", ["pending", "paid", "failed", "refunded"]).default("pending").notNull(),
+  paymentMethod: mysqlEnum("paymentMethod", ["cod", "stripe", "cashfree"]).notNull(), paymentStatus: mysqlEnum("paymentStatus", ["pending", "paid", "failed", "refunded"]).default("pending").notNull(),
   stripeCheckoutSessionId: varchar("stripeCheckoutSessionId", { length: 255 }), stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 255 }),
   itemTotalPaise: int("itemTotalPaise").notNull(), deliveryFeePaise: int("deliveryFeePaise").notNull(), discountPaise: int("discountPaise").notNull(), grandTotalPaise: int("grandTotalPaise").notNull(),
   deliveryAddressSnapshot: json("deliveryAddressSnapshot").$type<unknown>().notNull(), customerNote: text("customerNote"), createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [index("orders_user_idx").on(table.userId), index("orders_status_idx").on(table.status)]);
+
+export const paymentAttempts = mysqlTable("payment_attempts", {
+  id: int("id").autoincrement().primaryKey(), orderId: int("orderId").notNull(), userId: int("userId").notNull(),
+  provider: mysqlEnum("paymentProvider", ["stripe", "cashfree"]).notNull(), providerOrderId: varchar("providerOrderId", { length: 96 }).notNull(), paymentSessionId: text("paymentSessionId"), providerPaymentId: varchar("providerPaymentId", { length: 128 }),
+  status: mysqlEnum("paymentAttemptStatus", ["created", "pending", "paid", "failed", "expired", "cancelled"]).default("created").notNull(), amountPaise: int("amountPaise").notNull(), idempotencyKey: varchar("idempotencyKey", { length: 96 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("payment_attempt_provider_order_unique").on(table.provider, table.providerOrderId), uniqueIndex("payment_attempt_idempotency_unique").on(table.idempotencyKey), index("payment_attempt_order_idx").on(table.orderId)]);
+
+export const paymentWebhookEvents = mysqlTable("payment_webhook_events", {
+  id: int("id").autoincrement().primaryKey(), provider: mysqlEnum("webhookProvider", ["stripe", "cashfree"]).notNull(), providerEventId: varchar("providerEventId", { length: 160 }).notNull(), orderId: int("orderId"), payloadHash: varchar("payloadHash", { length: 64 }).notNull(), processedAt: timestamp("processedAt").defaultNow().notNull(),
+}, table => [uniqueIndex("payment_webhook_event_unique").on(table.provider, table.providerEventId), index("payment_webhook_order_idx").on(table.orderId)]);
 
 export const orderItems = mysqlTable("order_items", {
   id: int("id").autoincrement().primaryKey(), orderId: int("orderId").notNull(), menuItemId: int("menuItemId").notNull(), itemNameSnapshot: varchar("itemNameSnapshot", { length: 180 }).notNull(), imageUrlSnapshot: text("imageUrlSnapshot"), unitPricePaise: int("unitPricePaise").notNull(), quantity: int("quantity").notNull(), selectedOptions: json("selectedOptions").$type<unknown>().notNull(),

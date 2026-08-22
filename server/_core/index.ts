@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerStripeWebhook } from "../stripeWebhook";
+import { registerCashfreeWebhook } from "../cashfreeWebhook";
 import { registerSitemap } from "../sitemap";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -34,6 +35,7 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   registerStripeWebhook(app);
+  registerCashfreeWebhook(app);
   registerSitemap(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));

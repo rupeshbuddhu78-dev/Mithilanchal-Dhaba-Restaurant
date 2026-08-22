@@ -6,6 +6,7 @@ import { ORDER_STATUS_LABELS, ORDER_TRANSITIONS, ORDER_STATUSES } from "../../sh
 import { requireOperationsRole, requireRole } from "../guards";
 import { getDb } from "../db";
 import { ensureRestaurantSeed } from "../seed";
+import { uploadCloudinaryImage } from "../cloudinary";
 import { protectedProcedure, router } from "../_core/trpc";
 
 async function requiredDb() { const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database is unavailable." }); return db; }
@@ -68,6 +69,14 @@ export const operationsRouter = router({
       save: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(160), formattedAddress: z.string().trim().min(4).max(1000), city: z.string().trim().max(120).nullable().optional(), state: z.string().trim().max(120).nullable().optional(), country: z.string().trim().max(120).nullable().optional(), pincode: z.string().trim().max(20).nullable().optional(), phone: z.string().trim().max(30).nullable().optional(), email: z.string().email().max(320).nullable().optional(), heroHeading: z.string().trim().max(500).nullable().optional(), heroSubtitle: z.string().trim().max(1200).nullable().optional(), heroImageUrl: z.string().trim().max(2000).nullable().optional(), aboutText: z.string().trim().max(3000).nullable().optional(), logoUrl: z.string().trim().max(2000).nullable().optional() })).mutation(async ({ ctx, input }) => { requireOperationsRole(ctx); const db = await requiredDb(); const [existing] = await db.select().from(restaurantSettings).limit(1); if (existing) await db.update(restaurantSettings).set(input).where(eq(restaurantSettings.id, existing.id)); else await db.insert(restaurantSettings).values(input); return { success: true }; }),
     }),
     seedCatalog: protectedProcedure.mutation(async ({ ctx }) => { requireRole(ctx, ["admin"]); return { seeded: await ensureRestaurantSeed() }; }),
+    media: router({
+      uploadImage: protectedProcedure.input(z.object({ dataUrl: z.string().max(8_000_000), folder: z.enum(["restaurant", "menu", "categories"]) })).mutation(async ({ ctx, input }) => {
+        requireRole(ctx, ["admin"]);
+        const uploaded = await uploadCloudinaryImage({ dataUrl: input.dataUrl, folder: `mithilanchal-dhaba/${input.folder}` });
+        await (await requiredDb()).insert(auditEvents).values({ actorUserId: ctx.user.id, action: "media.uploaded", resourceType: "cloudinary", resourceId: uploaded.publicId || uploaded.url, metadata: { folder: input.folder } });
+        return uploaded;
+      }),
+    }),
   }),
   rider: router({
     tasks: protectedProcedure.query(async ({ ctx }) => {
