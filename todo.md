@@ -37,5 +37,5 @@
 - [x] Verify the deployed public home and menu pages plus `restaurant.settings`, `restaurant.categories`, `restaurant.menu`, and `restaurant.bootstrap` against TiDB after the credential refresh.
 - [x] Apply the remaining reviewed Drizzle schema tables to the temporary TiDB `test` database and validate the full 15-table inventory.
 - [x] Verify the protected cart route’s sign-in gate and document that an end-to-end protected-flow test remains dependent on replacing or configuring Manus OAuth for Render.
-- [ ] Replace the Manus-only authentication path with a secure Render-compatible administrator login flow.
-- [ ] Configure the secure external authentication environment variables and verify administrator access to the deployed dashboard.
+- [x] Replace the Manus-only authentication path with a secure Render-compatible administrator login flow.
+- [x] Configure the secure external authentication environment variables and verify administrator access to the deployed dashboard.
