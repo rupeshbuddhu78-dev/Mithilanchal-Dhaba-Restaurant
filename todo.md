@@ -30,3 +30,6 @@
 - [ ] Deploy the GitHub repository to Render, configure production environment variables, and resolve external-hosting blockers for the restaurant platform.
 - [ ] Provision a temporary MySQL-compatible cloud database and connect it to the Render service using DATABASE_URL.
 - [x] Enable secure TLS database connections required by the temporary TiDB Cloud endpoint before Render deployment.
+- [ ] Apply the reviewed restaurant schema and safe catalog seed to the temporary TiDB database, then revalidate the live menu.
+- [ ] Correct the TiDB pool to use mysql2’s promise-based client so Drizzle queries work in the live Render service.
+- [ ] Log the safe underlying catalog-query error in the Render backend to identify and resolve the final TiDB connection mismatch.

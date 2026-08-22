@@ -33,7 +33,12 @@ export const restaurantRouter = router({
       const term = `%${input.search}%`;
       predicates.push(or(like(menuItems.name, term), like(menuItems.description, term))!);
     }
-    return db.select({ item: menuItems, category: categories }).from(menuItems).innerJoin(categories, eq(menuItems.categoryId, categories.id)).where(and(...predicates)).orderBy(desc(menuItems.isFeatured), asc(menuItems.name));
+    try {
+      return await db.select({ item: menuItems, category: categories }).from(menuItems).innerJoin(categories, eq(menuItems.categoryId, categories.id)).where(and(...predicates)).orderBy(desc(menuItems.isFeatured), asc(menuItems.name));
+    } catch (error) {
+      console.error("[Restaurant] Public catalog query failed", error);
+      throw error;
+    }
   }),
   itemBySlug: publicProcedure.input(z.object({ slug: z.string().min(1).max(220) })).query(async ({ input }) => {
     const db = await getDb();
@@ -42,4 +47,3 @@ export const restaurantRouter = router({
     return result ?? null;
   }),
 });
-
