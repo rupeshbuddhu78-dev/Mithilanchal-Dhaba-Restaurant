@@ -27,3 +27,6 @@
 - [x] Clear stale development diagnostics and verify a fresh Home session has no error indicator.
 - [x] Visually confirm the Home error badge is absent after restart and classify the one-time restart-process exit diagnostic.
 - [x] Provide a complete Hindi Render deployment guide covering the current project, environment variables, Stripe, Cashfree, MongoDB, JWT, webhooks, domains, and troubleshooting.
+- [ ] Deploy the GitHub repository to Render, configure production environment variables, and resolve external-hosting blockers for the restaurant platform.
+- [ ] Provision a temporary MySQL-compatible cloud database and connect it to the Render service using DATABASE_URL.
+- [x] Enable secure TLS database connections required by the temporary TiDB Cloud endpoint before Render deployment.
