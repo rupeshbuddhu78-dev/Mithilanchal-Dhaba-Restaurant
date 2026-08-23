@@ -80,3 +80,10 @@
 - [x] Build live-map rider markers and protected active-order tracking refresh for the approved full real-time experience, using consent-gated location data only.
 - [ ] Live-validate customer, rider, and administrator tracking maps in production using consent-granted rider location for an active approved TEST delivery.
 - [x] Ensure the reviewed additive tracking columns are present on the actual Render TiDB connection before production tracking queries run, without modifying or deleting existing records.
+- [x] Reset only the clearly identified existing TEST customer through the protected administrator flow, without changing any real account, record, or order.
+- [x] Verify the reset TEST customer in a clean browser session, after refresh, and through its existing profile and preserved data.
+- [ ] Re-run the user-approved Cashfree sandbox validation after TEST customer recovery, without real-money payment or credential disclosure.
+- [ ] Continue approved delivery-navigation and protected customer/admin live-map validation only with existing authorized TEST data unless the user explicitly approves another TEST order.
+- [ ] Use the user-authorized private credential only for required protected TEST/admin/rider validation steps, without recording, disclosing, or committing it.
+- [ ] Capture explicit non-secret confirmation that the protected reset mutation succeeded only for TEST E2E Customer 20260822, then repeat clean-session customer verification.
+- [x] Add explicit inline success, error, and pending feedback to the protected customer reset control so TEST-only reset outcomes can be verified without relying on transient toasts.
