@@ -76,7 +76,7 @@
 
 /// <reference types="@types/google.maps" />
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePersistFn } from "@/hooks/usePersistFn";
 import { cn } from "@/lib/utils";
 
@@ -91,22 +91,35 @@ const FORGE_BASE_URL =
   import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
   "https://forge.butterfly-effect.dev";
 const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
+let mapsLoader: Promise<void> | null = null;
 
 function loadMapScript() {
-  return new Promise(resolve => {
+  if (window.google?.maps) return Promise.resolve();
+  if (mapsLoader) return mapsLoader;
+  mapsLoader = new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry,routes`;
+    const params = new URLSearchParams({ v: "weekly", libraries: "marker,places,geocoding,geometry,routes" });
+    if (API_KEY) params.set("key", API_KEY);
+    script.src = `${MAPS_PROXY_URL}/maps/api/js?${params.toString()}`;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => {
-      resolve(null);
+      if (!window.google?.maps) {
+        mapsLoader = null;
+        reject(new Error("Google Maps did not initialise"));
+        return;
+      }
+      resolve();
       script.remove(); // Clean up immediately
     };
     script.onerror = () => {
       console.error("Failed to load Google Maps script");
+      mapsLoader = null;
+      reject(new Error("Failed to load Google Maps script"));
     };
     document.head.appendChild(script);
   });
+  return mapsLoader;
 }
 
 interface MapViewProps {
@@ -124,6 +137,7 @@ export function MapView({
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
+  const [mapLoadError, setMapLoadError] = useState(false);
 
   const init = usePersistFn(async () => {
     await loadMapScript();
@@ -146,8 +160,10 @@ export function MapView({
   });
 
   useEffect(() => {
-    init();
+    void init().catch(() => setMapLoadError(true));
   }, [init]);
+
+  if (mapLoadError) return <div role="status" className="rounded-2xl bg-[#fbf8f2] p-4 text-sm text-[#74695b]">The live map could not be loaded. Delivery sharing remains protected; use the available route directions instead.</div>;
 
   return (
     <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />

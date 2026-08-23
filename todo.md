@@ -92,4 +92,5 @@
 - [ ] Capture explicit non-secret confirmation that the protected reset mutation succeeded only for TEST E2E Customer 20260822, then repeat clean-session customer verification.
 - [ ] Add non-secret server-side diagnostics for a failed protected TEST customer reset mutation, then resolve the observed production failure without touching real accounts or records.
 - [x] Add explicit inline success, error, and pending feedback to the protected customer reset control so TEST-only reset outcomes can be verified without relying on transient toasts.
-- [ ] Diagnose and repair, if confirmed, the production visibility mismatch where approved TEST order MD-5CO88PJA is rider-assigned in administrator operations but is not shown in the assigned TEST rider workspace; preserve every existing record.
+- [x] Diagnose and repair, if confirmed, the production visibility mismatch where approved TEST order MD-5CO88PJA is rider-assigned in administrator operations but is not shown in the assigned TEST rider workspace; preserve every existing record.
+- [ ] Repair the production Google Maps loader so it never sends an undefined proxy key and presents a usable map or explicit non-sensitive fallback for authorized live delivery tracking.
