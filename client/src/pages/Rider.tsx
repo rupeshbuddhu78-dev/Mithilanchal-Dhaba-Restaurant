@@ -31,8 +31,11 @@ export default function Rider() {
   const update = trpc.operations.rider.updateStatus.useMutation({ onSuccess: () => { utils.operations.rider.tasks.invalidate(); toast.success("Delivery progress updated"); }, onError: error => toast.error(error.message) });
   const location = trpc.operations.rider.updateLocation.useMutation({ onSuccess: () => toast.success("Current location shared with operations"), onError: error => toast.error(error.message) });
 
-  const requestLocation = (onReady?: (coordinates: Coordinates) => void) => {
-    if (!navigator.geolocation) return toast.error("Location is not available in this browser.");
+  const requestLocation = (onReady?: (coordinates: Coordinates) => void, onUnavailable?: () => void) => {
+    if (!navigator.geolocation) {
+      onUnavailable?.();
+      return toast.error("Location is not available in this browser.");
+    }
     navigator.geolocation.getCurrentPosition(
       position => {
         const next = { latitude: position.coords.latitude, longitude: position.coords.longitude };
@@ -40,20 +43,28 @@ export default function Rider() {
         location.mutate(next);
         onReady?.(next);
       },
-      () => toast.error("Location permission was not granted. You can still use address directions."),
+      () => {
+        onUnavailable?.();
+        toast.error("Location permission was not granted. You can still use address directions.");
+      },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   };
 
   const openLiveDirections = (target: string) => {
     if (!target.trim()) return toast.error("A delivery address is required for directions.");
-    const open = (coordinates: Coordinates) => {
+    const navigate = (coordinates: Coordinates, routeWindow?: Window | null) => {
       const route = buildLiveDirectionsUrl(coordinates, target);
       if (!route) return toast.error("A delivery address is required for directions.");
-      window.open(route, "_blank", "noopener,noreferrer");
+      if (routeWindow) {
+        routeWindow.opener = null;
+        routeWindow.location.replace(route);
+      } else window.open(route, "_blank", "noopener,noreferrer");
     };
-    if (currentLocation) open(currentLocation);
-    else requestLocation(open);
+    if (currentLocation) return navigate(currentLocation);
+    // Reserve the tab within the click gesture; opening a new window after geolocation resolves is blocked by modern browsers.
+    const routeWindow = window.open("about:blank", "_blank");
+    requestLocation(coordinates => navigate(coordinates, routeWindow), () => routeWindow?.close());
   };
 
   if (!loading && !allowed) {
