@@ -9,6 +9,14 @@ type CashfreeOrder = {
 type CashfreePayment = { cf_payment_id?: string | number; payment_status?: string };
 
 const API_VERSION = process.env.CASHFREE_API_VERSION || "2023-08-01";
+const SANDBOX_TEST_CUSTOMER_PHONE = "9999999999";
+
+export function cashfreeCustomerPhone(phone: string, environment: "sandbox" | "production") {
+  const digits = phone.replace(/\D/g, "");
+  const withoutCountryCode = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  if (/^[6-9]\d{9}$/.test(withoutCountryCode)) return withoutCountryCode;
+  return environment === "sandbox" ? SANDBOX_TEST_CUSTOMER_PHONE : null;
+}
 
 export function getCashfreeConfig() {
   const clientId = process.env.CASHFREE_CLIENT_ID;
@@ -49,13 +57,17 @@ async function requestCashfree<T>(path: string, init: RequestInit & { idempotenc
 export async function createCashfreeOrder(input: {
   providerOrderId: string; idempotencyKey: string; amountPaise: number; customerId: string; name?: string | null; email?: string | null; phone: string; returnUrl: string;
 }) {
+  const config = getCashfreeConfig();
+  if (!config) throw new Error("Cashfree is not configured.");
+  const customerPhone = cashfreeCustomerPhone(input.phone, config.environment);
+  if (!customerPhone) throw new Error("A valid 10-digit customer phone number is required for Cashfree online payment.");
   return requestCashfree<CashfreeOrder>("/orders", {
     method: "POST", idempotencyKey: input.idempotencyKey,
     body: JSON.stringify({
       order_id: input.providerOrderId,
       order_amount: Number((input.amountPaise / 100).toFixed(2)),
       order_currency: "INR",
-      customer_details: { customer_id: input.customerId, customer_name: input.name || undefined, customer_email: input.email || undefined, customer_phone: input.phone },
+      customer_details: { customer_id: input.customerId, customer_name: input.name || undefined, customer_email: input.email || undefined, customer_phone: customerPhone },
       order_meta: { return_url: input.returnUrl },
       order_note: "Mithilanchal Dhaba online order",
     }),
