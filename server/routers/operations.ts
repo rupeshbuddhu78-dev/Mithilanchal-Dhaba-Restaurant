@@ -45,9 +45,16 @@ export const operationsRouter = router({
       requireRole(ctx, ["admin"]); const db = await requiredDb(); const email = input.email.toLowerCase(); const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
       if (existing) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
       try {
-        const passwordHash = await hashPassword(input.password); const inserted = await db.insert(users).values({ openId: localOpenId(email), name: input.name, email, phone: input.phone, role: "rider", passwordHash, loginMethod: "password", isActive: true });
-        const riderUserId = Number(inserted[0].insertId); await db.insert(riderProfiles).values({ userId: riderUserId, displayName: input.name, phone: input.phone });
-        await db.insert(auditEvents).values({ actorUserId: ctx.user.id, action: "rider.provisioned", resourceType: "user", resourceId: String(riderUserId), metadata: { email } }); return { success: true, riderUserId };
+        const passwordHash = await hashPassword(input.password); const openId = localOpenId(email);
+        const riderUserId = await db.transaction(async tx => {
+          await tx.insert(users).values({ openId, name: input.name, email, phone: input.phone, role: "rider", passwordHash, loginMethod: "password", isActive: true });
+          const [created] = await tx.select({ id: users.id }).from(users).where(eq(users.openId, openId)).limit(1);
+          if (!created) throw new Error("Created rider account could not be resolved.");
+          await tx.insert(riderProfiles).values({ userId: created.id, displayName: input.name, phone: input.phone });
+          await tx.insert(auditEvents).values({ actorUserId: ctx.user.id, action: "rider.provisioned", resourceType: "user", resourceId: String(created.id), metadata: { email } });
+          return created.id;
+        });
+        return { success: true, riderUserId };
       } catch (error) {
         console.error("[Rider provisioning]", { message: error instanceof Error ? error.message : "Unknown failure", code: (error as { code?: string } | undefined)?.code });
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Rider account could not be created. Please try again." });
