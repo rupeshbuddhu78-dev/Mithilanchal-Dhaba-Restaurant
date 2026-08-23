@@ -72,6 +72,18 @@ export const operationsRouter = router({
       });
       return { success: true } as const;
     }),
+    resetCustomerPassword: protectedProcedure.input(z.object({ customerUserId: z.number().int().positive(), password: z.string().min(12).max(200) })).mutation(async ({ ctx, input }) => {
+      requireRole(ctx, ["admin"]);
+      const db = await requiredDb();
+      const [customer] = await db.select({ id: users.id, role: users.role }).from(users).where(and(eq(users.id, input.customerUserId), eq(users.role, "customer"))).limit(1);
+      if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "Customer account not found." });
+      const passwordHash = await hashPassword(input.password);
+      await db.transaction(async tx => {
+        await tx.update(users).set({ passwordHash, loginMethod: "password", isActive: true }).where(eq(users.id, customer.id));
+        await tx.insert(auditEvents).values({ actorUserId: ctx.user.id, action: "customer.password_reset", resourceType: "user", resourceId: String(customer.id), metadata: { targetRole: "customer" } });
+      });
+      return { success: true } as const;
+    }),
     updateStatus: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), status: orderStatus, note: z.string().trim().max(500).optional() })).mutation(({ ctx, input }) => { requireOperationsRole(ctx); return changeStatus(input, ctx.user.id); }),
     assignRider: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), riderUserId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       requireOperationsRole(ctx); const db = await requiredDb();

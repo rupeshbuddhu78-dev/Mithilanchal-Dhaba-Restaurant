@@ -59,8 +59,13 @@
 - [ ] Investigate and fix the live customer cart/add-to-cart or checkout UI issue, then rerun a browser-only TEST COD checkout and confirm the complete customer-to-rider lifecycle.
 - [ ] Run a user-approved Cashfree sandbox payment end to end, including return flow, valid webhook delivery/signature, and trusted server synchronization for paid, failed, cancelled, or expired status.
 - [ ] Execute exactly one additional clearly labelled TEST COD browser checkout using only the existing TEST customer, administrator, and rider accounts; preserve the resulting record and verify customer order/status history through delivery.
-- [ ] Validate the same additional TEST COD order through administrator acceptance, preparation, ready-for-pickup, rider assignment, pickup, out-for-delivery, and delivered states without touching real records.
+- [x] Validate the same additional TEST COD order through administrator acceptance, preparation, ready-for-pickup, rider assignment, pickup, out-for-delivery, and delivered states without touching real records.
 - [ ] Inspect Cashfree sandbox/dashboard prerequisites and report before any potentially breaking production configuration change.
 - [ ] Execute the user-approved Cashfree sandbox checkout, return/callback, signed webhook, provider verification, trusted server synchronization, and duplicate-webhook idempotency validation without exposing secrets.
 - [x] Add an administrator-only, audited rider-password reset control that accepts a new password without displaying or returning any credential and does not change database architecture.
-- [ ] Use the new controlled reset only for the existing TEST E2E Rider account, then complete the already approved TEST COD rider delivery validation.
+- [x] Use the new controlled reset only for the existing TEST E2E Rider account, then complete the already approved TEST COD rider delivery validation.
+- [ ] Add an administrator-only, audited customer-password reset control restricted to customer accounts and use it only for the existing TEST customer when the user privately supplies a new password.
+- [x] Add a non-enumerating Forgot password request flow for customer and rider login that records a request for administrator follow-up without disclosing whether an account exists.
+- [x] Add consent-based rider navigation that uses the rider's current browser location only after permission, opens route directions to the assigned delivery address, and falls back safely when location is unavailable.
+- [ ] Refine rider navigation so a single consent-granted live-location action immediately opens the route to the assigned delivery address, while retaining a permission-denied/address-only fallback.
+- [ ] Live-validate rider navigation in the deployed rider workspace, including location permission, route opening, and the no-location fallback path.

@@ -1,8 +1,8 @@
 import { COOKIE_NAME } from "@shared/const";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { users } from "../drizzle/schema";
+import { auditEvents, notifications, users } from "../drizzle/schema";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
@@ -105,6 +105,20 @@ export const appRouter = router({
       const sessionToken = await sdk.signSession({ openId: user.openId, appId: `local_${input.role}`, name: user.name || input.role }, { expiresInMs: 12 * 60 * 60 * 1000 });
       ctx.res.cookie(COOKIE_NAME, sessionToken, { ...getSessionCookieOptions(ctx.req), maxAge: 12 * 60 * 60 * 1000 });
       return { success: true, role: user.role } as const;
+    }),
+    passwordResetRequest: publicProcedure.input(z.object({ email: z.string().email().max(320), role: z.enum(["customer", "rider"]) })).mutation(async ({ input }) => {
+      const database = await db.getDb();
+      const email = normaliseEmail(input.email);
+      if (database) {
+        const [account] = await database.select({ id: users.id, role: users.role, isActive: users.isActive }).from(users).where(eq(users.email, email)).limit(1);
+        if (account?.isActive && account.role === input.role) {
+          const admins = await database.select({ id: users.id }).from(users).where(inArray(users.role, ["admin", "staff"]));
+          await database.insert(auditEvents).values({ actorUserId: null, action: "account.password_reset_requested", resourceType: "user", resourceId: String(account.id), metadata: { requestedRole: input.role } });
+          if (admins.length) await database.insert(notifications).values(admins.map(admin => ({ userId: admin.id, type: "password_reset_request", title: "Password reset request", body: `A ${input.role} requested account recovery. Review the protected account reset controls.`, orderId: null })));
+        }
+      }
+      // Always return the same result so this endpoint cannot be used to enumerate accounts.
+      return { success: true } as const;
     }),
     profile: router({
       update: publicProcedure.input(z.object({ name: z.string().trim().min(2).max(160), phone: z.string().trim().min(6).max(30) })).mutation(async ({ ctx, input }) => {

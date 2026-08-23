@@ -40,4 +40,12 @@ describe("administrator rider password reset", () => {
     const caller = operationsRouter.createCaller({ user: { id: 9, role: "staff" }, req: {}, res: {} } as any);
     await expect(caller.admin.resetRiderPassword({ riderUserId: 77, password: "new-temporary-password" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
+
+  it("lets an administrator reset a customer password with a separate audited action", async () => {
+    const caller = operationsRouter.createCaller({ user: { id: 5, role: "admin" }, req: {}, res: {} } as any);
+    await expect(caller.admin.resetCustomerPassword({ customerUserId: 77, password: "another-temporary-password" })).resolves.toEqual({ success: true });
+    const update = updateSet.mock.calls[0]?.[0] as { passwordHash?: string };
+    await expect(verifyPassword("another-temporary-password", update.passwordHash ?? null)).resolves.toBe(true);
+    expect(auditValues).toHaveBeenCalledWith(expect.objectContaining({ action: "customer.password_reset", metadata: { targetRole: "customer" } }));
+  });
 });
