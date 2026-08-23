@@ -6,6 +6,7 @@ describe("active delivery assignment visibility", () => {
     const source = readFileSync(new URL("../client/src/components/ActiveDeliveryAssignment.tsx", import.meta.url), "utf8");
     expect(source).toContain("operations.admin.activeAssignments.useQuery");
     expect(source).toContain("Current rider:");
+    expect(source).toContain("Unassigned — action required");
     expect(source).toContain("operations.admin.assignRider.useMutation");
     expect(source).toContain("Update rider");
   });

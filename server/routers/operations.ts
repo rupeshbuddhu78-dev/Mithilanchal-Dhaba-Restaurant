@@ -46,9 +46,9 @@ export const operationsRouter = router({
     activeAssignments: protectedProcedure.query(async ({ ctx }) => {
       requireOperationsRole(ctx); const db = await requiredDb();
       return db.select({ assignment: riderAssignments, order: orders, rider: { id: users.id, name: users.name, email: users.email } })
-        .from(riderAssignments)
-        .innerJoin(orders, eq(riderAssignments.orderId, orders.id))
-        .innerJoin(users, eq(riderAssignments.riderUserId, users.id))
+        .from(orders)
+        .leftJoin(riderAssignments, eq(riderAssignments.orderId, orders.id))
+        .leftJoin(users, eq(riderAssignments.riderUserId, users.id))
         .where(inArray(orders.status, ["rider_assigned", "out_for_delivery"]))
         .orderBy(desc(riderAssignments.assignedAt));
     }),
