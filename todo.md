@@ -67,7 +67,7 @@
 - [x] Add an administrator-only, audited customer-password reset control restricted to customer accounts and use it only for the existing TEST customer when the user privately supplies a new password.
 - [x] Add a non-enumerating Forgot password request flow for customer and rider login that records a request for administrator follow-up without disclosing whether an account exists.
 - [x] Add consent-based rider navigation that uses the rider's current browser location only after permission, opens route directions to the assigned delivery address, and falls back safely when location is unavailable.
-- [ ] Refine rider navigation so a single consent-granted live-location action immediately opens the route to the assigned delivery address, while retaining a permission-denied/address-only fallback.
+- [x] Refine rider navigation so a single consent-granted live-location action immediately opens the route to the assigned delivery address, while retaining a permission-denied/address-only fallback.
 - [ ] Live-validate rider navigation in the deployed rider workspace, including location permission, route opening, and the no-location fallback path.
 - [x] Fix the browser popup-blocking behavior observed after asynchronous location permission so the first Use live location click retains a valid route window for the consent callback.
 - [x] Create exactly one additional clearly labelled TEST COD order for the user-approved rider map-navigation test, preserve it, and complete its delivery with the existing TEST accounts.
