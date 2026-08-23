@@ -82,9 +82,11 @@
 - [x] Ensure the reviewed additive tracking columns are present on the actual Render TiDB connection before production tracking queries run, without modifying or deleting existing records.
 - [x] Reset only the clearly identified existing TEST customer through the protected administrator flow, without changing any real account, record, or order.
 - [x] Verify the reset TEST customer in a clean browser session, after refresh, and through its existing profile and preserved data.
-- [ ] Re-run the user-approved Cashfree sandbox validation after TEST customer recovery, without real-money payment or credential disclosure.
+- [x] Re-run the user-approved Cashfree sandbox validation after TEST customer recovery, without real-money payment or credential disclosure.
 - [ ] Continue approved delivery-navigation and protected customer/admin live-map validation only with existing authorized TEST data unless the user explicitly approves another TEST order.
-- [ ] Use the user-authorized private credential only for required protected TEST/admin/rider validation steps, without recording, disclosing, or committing it.
+- [ ] If required for the remaining map checks, capture explicit location consent on the existing TEST address and create only one additional TEST COD order using the existing TEST accounts; preserve it and complete it after map evidence is captured.
+- [ ] Stop using logged credential entry for protected TEST/admin/rider checks and use user takeover/manual secure entry for any remaining secret field.
+- [ ] Ask the user to rotate the shared TEST/admin/rider password after validation because it appeared in session history; do not reset any account outside explicit authorization.
 - [ ] Capture explicit non-secret confirmation that the protected reset mutation succeeded only for TEST E2E Customer 20260822, then repeat clean-session customer verification.
 - [ ] Add non-secret server-side diagnostics for a failed protected TEST customer reset mutation, then resolve the observed production failure without touching real accounts or records.
 - [x] Add explicit inline success, error, and pending feedback to the protected customer reset control so TEST-only reset outcomes can be verified without relying on transient toasts.
