@@ -79,3 +79,4 @@
 - [ ] Verify and document the production Google Maps proxy/domain configuration for the deployed real-time map experience without exposing credentials or relying on an unverified paid-provider setup.
 - [x] Build live-map rider markers and protected active-order tracking refresh for the approved full real-time experience, using consent-gated location data only.
 - [ ] Live-validate customer, rider, and administrator tracking maps in production using consent-granted rider location for an active approved TEST delivery.
+- [ ] Ensure the reviewed additive tracking columns are present on the actual Render TiDB connection before production tracking queries run, without modifying or deleting existing records.

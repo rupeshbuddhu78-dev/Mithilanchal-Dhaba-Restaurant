@@ -11,6 +11,7 @@ import { serveStatic, setupVite } from "./vite";
 import { registerStripeWebhook } from "../stripeWebhook";
 import { registerCashfreeWebhook } from "../cashfreeWebhook";
 import { registerSitemap } from "../sitemap";
+import { ensureTrackingSchema } from "../trackingSchema";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -32,6 +33,11 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  try {
+    await ensureTrackingSchema();
+  } catch (error) {
+    console.error("[Tracking schema] Additive schema check failed; tracking queries may be unavailable until the database migration is applied.", error instanceof Error ? error.message : error);
+  }
   const app = express();
   const server = createServer(app);
   registerStripeWebhook(app);
