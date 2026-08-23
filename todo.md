@@ -44,7 +44,7 @@
 - [x] Complete evidence-based classifications for remaining customer account, ownership, admin, rider, tracking, map, security, and performance audit requirements without modifying application code, deployment, or database.
 - [ ] Implement a secure server-side Cashfree online-payment lifecycle with verified webhook processing, payment synchronization, idempotency, retry handling, and preserved COD flow without altering the current database architecture.
 - [x] Create, review, apply, and verify a backward-compatible additive TiDB migration for Cashfree references and secure customer/rider credentials without deleting or changing existing records.
-- [ ] Replace the production-only Manus OAuth dependency for customers and riders with secure self-contained registration/login/session flows and server-side role authorization without altering the current database architecture.
+- [x] Replace the production-only Manus OAuth dependency for customers and riders with secure self-contained registration/login/session flows and server-side role authorization without altering the current database architecture.
 - [x] Implement secure Cloudinary media upload/replacement controls for authorized administrators and remove broken production Manus-storage references without altering the current database architecture.
 - [x] Complete missing high-priority administrator controls for safe menu/category operations, order/rider visibility, and settings management without breaking historical orders.
 - [x] Add administrator menu image upload/replacement using Cloudinary and persist only the returned secure URL.
@@ -53,6 +53,14 @@
 - [x] Preserve existing menu customisation data during administrator menu edits.
 - [x] Block Cloudinary deletion when an image is referenced by a historical order item snapshot.
 - [x] Add focused regression coverage for safe menu edits and image-reference deletion blocking.
-- [ ] Create one clearly labelled TEST customer, one TEST rider through protected admin provisioning, and one TEST COD order without modifying existing production records.
+- [x] Create one clearly labelled TEST customer, one TEST rider through protected admin provisioning, and one TEST COD order without modifying existing production records.
 - [ ] Verify the authorized TEST customer login, COD checkout, order history, administrator dispatch, rider login, and delivery lifecycle end to end.
-- [ ] Diagnose and repair the production rider-provisioning failure observed during the authorized TEST workflow, then revalidate without creating duplicate riders.
+- [x] Diagnose and repair the production rider-provisioning failure observed during the authorized TEST workflow, then revalidate without creating duplicate riders.
+- [ ] Investigate and fix the live customer cart/add-to-cart or checkout UI issue, then rerun a browser-only TEST COD checkout and confirm the complete customer-to-rider lifecycle.
+- [ ] Run a user-approved Cashfree sandbox payment end to end, including return flow, valid webhook delivery/signature, and trusted server synchronization for paid, failed, cancelled, or expired status.
+- [ ] Execute exactly one additional clearly labelled TEST COD browser checkout using only the existing TEST customer, administrator, and rider accounts; preserve the resulting record and verify customer order/status history through delivery.
+- [ ] Validate the same additional TEST COD order through administrator acceptance, preparation, ready-for-pickup, rider assignment, pickup, out-for-delivery, and delivered states without touching real records.
+- [ ] Inspect Cashfree sandbox/dashboard prerequisites and report before any potentially breaking production configuration change.
+- [ ] Execute the user-approved Cashfree sandbox checkout, return/callback, signed webhook, provider verification, trusted server synchronization, and duplicate-webhook idempotency validation without exposing secrets.
+- [x] Add an administrator-only, audited rider-password reset control that accepts a new password without displaying or returning any credential and does not change database architecture.
+- [ ] Use the new controlled reset only for the existing TEST E2E Rider account, then complete the already approved TEST COD rider delivery validation.

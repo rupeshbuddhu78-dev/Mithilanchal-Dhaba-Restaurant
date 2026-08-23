@@ -60,6 +60,18 @@ export const operationsRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Rider account could not be created. Please try again." });
       }
     }),
+    resetRiderPassword: protectedProcedure.input(z.object({ riderUserId: z.number().int().positive(), password: z.string().min(12).max(200) })).mutation(async ({ ctx, input }) => {
+      requireRole(ctx, ["admin"]);
+      const db = await requiredDb();
+      const [rider] = await db.select({ id: users.id, role: users.role }).from(users).where(and(eq(users.id, input.riderUserId), eq(users.role, "rider"))).limit(1);
+      if (!rider) throw new TRPCError({ code: "NOT_FOUND", message: "Rider account not found." });
+      const passwordHash = await hashPassword(input.password);
+      await db.transaction(async tx => {
+        await tx.update(users).set({ passwordHash, loginMethod: "password", isActive: true }).where(eq(users.id, rider.id));
+        await tx.insert(auditEvents).values({ actorUserId: ctx.user.id, action: "rider.password_reset", resourceType: "user", resourceId: String(rider.id), metadata: { targetRole: "rider" } });
+      });
+      return { success: true } as const;
+    }),
     updateStatus: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), status: orderStatus, note: z.string().trim().max(500).optional() })).mutation(({ ctx, input }) => { requireOperationsRole(ctx); return changeStatus(input, ctx.user.id); }),
     assignRider: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), riderUserId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
       requireOperationsRole(ctx); const db = await requiredDb();
