@@ -87,6 +87,9 @@
 - [ ] If required for the remaining map checks, capture explicit location consent on the existing TEST address and create only one additional TEST COD order using the existing TEST accounts; preserve it and complete it after map evidence is captured.
 - [ ] Stop using logged credential entry for protected TEST/admin/rider checks and use user takeover/manual secure entry for any remaining secret field.
 - [ ] Ask the user to rotate the shared TEST/admin/rider password after validation because it appeared in session history; do not reset any account outside explicit authorization.
+- [ ] Re-run the remaining browser permission and Cashfree sandbox checks with the user present, without reusing logged credentials or creating any unapproved TEST data.
+- [x] Reproduce and fix the reported consent-captured TEST address save error without creating a new address or modifying real customer data.
 - [ ] Capture explicit non-secret confirmation that the protected reset mutation succeeded only for TEST E2E Customer 20260822, then repeat clean-session customer verification.
 - [ ] Add non-secret server-side diagnostics for a failed protected TEST customer reset mutation, then resolve the observed production failure without touching real accounts or records.
 - [x] Add explicit inline success, error, and pending feedback to the protected customer reset control so TEST-only reset outcomes can be verified without relying on transient toasts.
+- [ ] Diagnose and repair, if confirmed, the production visibility mismatch where approved TEST order MD-5CO88PJA is rider-assigned in administrator operations but is not shown in the assigned TEST rider workspace; preserve every existing record.

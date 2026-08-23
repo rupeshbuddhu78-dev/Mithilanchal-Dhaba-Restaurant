@@ -43,6 +43,15 @@ export const operationsRouter = router({
     orders: protectedProcedure.query(async ({ ctx }) => { requireOperationsRole(ctx); return (await requiredDb()).select().from(orders).orderBy(desc(orders.createdAt)).limit(100); }),
     customers: protectedProcedure.query(async ({ ctx }) => { requireOperationsRole(ctx); return (await requiredDb()).select({ id: users.id, name: users.name, email: users.email, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn }).from(users).where(eq(users.role, "customer")).orderBy(desc(users.createdAt)).limit(100); }),
     riders: protectedProcedure.query(async ({ ctx }) => { requireOperationsRole(ctx); return (await requiredDb()).select({ id: users.id, name: users.name, email: users.email, phone: users.phone, createdAt: users.createdAt }).from(users).where(eq(users.role, "rider")).orderBy(desc(users.createdAt)).limit(100); }),
+    activeAssignments: protectedProcedure.query(async ({ ctx }) => {
+      requireOperationsRole(ctx); const db = await requiredDb();
+      return db.select({ assignment: riderAssignments, order: orders, rider: { id: users.id, name: users.name, email: users.email } })
+        .from(riderAssignments)
+        .innerJoin(orders, eq(riderAssignments.orderId, orders.id))
+        .innerJoin(users, eq(riderAssignments.riderUserId, users.id))
+        .where(inArray(orders.status, ["rider_assigned", "out_for_delivery"]))
+        .orderBy(desc(riderAssignments.assignedAt));
+    }),
     provisionRider: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(160), email: z.string().trim().email().max(320), phone: z.string().trim().min(7).max(30), password: z.string().min(12).max(200) })).mutation(async ({ ctx, input }) => {
       requireRole(ctx, ["admin"]); const db = await requiredDb(); const email = input.email.toLowerCase(); const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
       if (existing) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
