@@ -53,3 +53,6 @@
 - [x] Preserve existing menu customisation data during administrator menu edits.
 - [x] Block Cloudinary deletion when an image is referenced by a historical order item snapshot.
 - [x] Add focused regression coverage for safe menu edits and image-reference deletion blocking.
+- [ ] Create one clearly labelled TEST customer, one TEST rider through protected admin provisioning, and one TEST COD order without modifying existing production records.
+- [ ] Verify the authorized TEST customer login, COD checkout, order history, administrator dispatch, rider login, and delivery lifecycle end to end.
+- [ ] Diagnose and repair the production rider-provisioning failure observed during the authorized TEST workflow, then revalidate without creating duplicate riders.

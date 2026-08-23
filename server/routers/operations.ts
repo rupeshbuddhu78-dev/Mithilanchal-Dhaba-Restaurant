@@ -42,11 +42,16 @@ export const operationsRouter = router({
     customers: protectedProcedure.query(async ({ ctx }) => { requireOperationsRole(ctx); return (await requiredDb()).select({ id: users.id, name: users.name, email: users.email, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn }).from(users).where(eq(users.role, "customer")).orderBy(desc(users.createdAt)).limit(100); }),
     riders: protectedProcedure.query(async ({ ctx }) => { requireOperationsRole(ctx); return (await requiredDb()).select({ id: users.id, name: users.name, email: users.email, phone: users.phone, createdAt: users.createdAt }).from(users).where(eq(users.role, "rider")).orderBy(desc(users.createdAt)).limit(100); }),
     provisionRider: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(160), email: z.string().trim().email().max(320), phone: z.string().trim().min(7).max(30), password: z.string().min(12).max(200) })).mutation(async ({ ctx, input }) => {
-      requireRole(ctx, ["admin"]); const db = await requiredDb(); const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email.toLowerCase())).limit(1);
+      requireRole(ctx, ["admin"]); const db = await requiredDb(); const email = input.email.toLowerCase(); const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
       if (existing) throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
-      const email = input.email.toLowerCase(); const passwordHash = await hashPassword(input.password); const inserted = await db.insert(users).values({ openId: localOpenId(email), name: input.name, email, phone: input.phone, role: "rider", passwordHash, loginMethod: "password" });
-      const riderUserId = Number(inserted[0].insertId); await db.insert(riderProfiles).values({ userId: riderUserId, displayName: input.name });
-      await db.insert(auditEvents).values({ actorUserId: ctx.user.id, action: "rider.provisioned", resourceType: "user", resourceId: String(riderUserId), metadata: { email: input.email.toLowerCase() } }); return { success: true, riderUserId };
+      try {
+        const passwordHash = await hashPassword(input.password); const inserted = await db.insert(users).values({ openId: localOpenId(email), name: input.name, email, phone: input.phone, role: "rider", passwordHash, loginMethod: "password", isActive: true });
+        const riderUserId = Number(inserted[0].insertId); await db.insert(riderProfiles).values({ userId: riderUserId, displayName: input.name, phone: input.phone });
+        await db.insert(auditEvents).values({ actorUserId: ctx.user.id, action: "rider.provisioned", resourceType: "user", resourceId: String(riderUserId), metadata: { email } }); return { success: true, riderUserId };
+      } catch (error) {
+        console.error("[Rider provisioning]", { message: error instanceof Error ? error.message : "Unknown failure", code: (error as { code?: string } | undefined)?.code });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Rider account could not be created. Please try again." });
+      }
     }),
     updateStatus: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), status: orderStatus, note: z.string().trim().max(500).optional() })).mutation(({ ctx, input }) => { requireOperationsRole(ctx); return changeStatus(input, ctx.user.id); }),
     assignRider: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), riderUserId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
