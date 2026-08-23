@@ -71,3 +71,11 @@
 - [ ] Live-validate rider navigation in the deployed rider workspace, including location permission, route opening, and the no-location fallback path.
 - [ ] Fix the browser popup-blocking behavior observed after asynchronous location permission so the first Use live location click retains a valid route window for the consent callback.
 - [ ] Create exactly one additional clearly labelled TEST COD order for the user-approved rider map-navigation test, preserve it, and complete its delivery with the existing TEST accounts.
+- [x] Define privacy, consent, authorization, retention, and update-frequency rules for customer destination coordinates and active rider-location sharing.
+- [x] Add backward-compatible TiDB fields and server contracts for customer address coordinates, active rider coordinates, and protected order-tracking reads without modifying existing records.
+- [x] Add customer location capture during address entry with explicit consent and manual-address fallback.
+- [x] Add consent-based active rider location sharing during an assigned delivery, destination navigation from coordinate or address fallback, and automatic stop at delivery completion.
+- [x] Add protected customer/admin/rider map-tracking views that expose only the minimum active-delivery location data to authorized parties.
+- [ ] Verify and document the production Google Maps proxy/domain configuration for the deployed real-time map experience without exposing credentials or relying on an unverified paid-provider setup.
+- [x] Build live-map rider markers and protected active-order tracking refresh for the approved full real-time experience, using consent-gated location data only.
+- [ ] Live-validate customer, rider, and administrator tracking maps in production using consent-granted rider location for an active approved TEST delivery.

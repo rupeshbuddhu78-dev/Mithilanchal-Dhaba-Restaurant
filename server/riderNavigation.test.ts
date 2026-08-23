@@ -4,6 +4,7 @@ import { buildAddressDirectionsUrl, buildLiveDirectionsUrl } from "../client/src
 describe("rider navigation links", () => {
   it("builds a driving route from a permission-granted rider location to the delivery address", () => {
     expect(buildLiveDirectionsUrl({ latitude: 25.6093, longitude: 85.1376 }, "Mission Rd, TEST CITY, 000000")).toBe("https://www.google.com/maps/dir/?api=1&origin=25.6093,85.1376&destination=Mission%20Rd%2C%20TEST%20CITY%2C%20000000&travelmode=driving");
+    expect(buildLiveDirectionsUrl({ latitude: 25.6093, longitude: 85.1376 }, { latitude: 25.611, longitude: 85.14 })).toBe("https://www.google.com/maps/dir/?api=1&origin=25.6093,85.1376&destination=25.611%2C85.14&travelmode=driving");
   });
 
   it("returns safe null values when no destination exists and provides an address-only fallback otherwise", () => {

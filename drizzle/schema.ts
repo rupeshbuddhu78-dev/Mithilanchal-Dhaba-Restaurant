@@ -35,6 +35,7 @@ export const menuItems = mysqlTable("menu_items", {
 export const addresses = mysqlTable("addresses", {
   id: int("id").autoincrement().primaryKey(), userId: int("userId").notNull(), label: varchar("label", { length: 80 }).notNull(), recipientName: varchar("recipientName", { length: 160 }).notNull(), phone: varchar("phone", { length: 30 }).notNull(),
   line1: text("line1").notNull(), line2: text("line2"), city: varchar("city", { length: 120 }).notNull(), state: varchar("state", { length: 120 }).notNull(), pincode: varchar("pincode", { length: 20 }).notNull(), deliveryInstructions: text("deliveryInstructions"), isDefault: boolean("isDefault").default(false).notNull(),
+  latitude: varchar("latitude", { length: 32 }), longitude: varchar("longitude", { length: 32 }), locationConsentAt: timestamp("locationConsentAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [index("addresses_user_idx").on(table.userId)]);
 
@@ -80,6 +81,7 @@ export const riderProfiles = mysqlTable("rider_profiles", {
 
 export const riderAssignments = mysqlTable("rider_assignments", {
   id: int("id").autoincrement().primaryKey(), orderId: int("orderId").notNull(), riderUserId: int("riderUserId").notNull(), assignedByUserId: int("assignedByUserId").notNull(), assignedAt: timestamp("assignedAt").defaultNow().notNull(), pickedUpAt: timestamp("pickedUpAt"), deliveredAt: timestamp("deliveredAt"),
+  lastLatitude: varchar("lastLatitude", { length: 32 }), lastLongitude: varchar("lastLongitude", { length: 32 }), lastLocationAt: timestamp("lastLocationAt"), trackingConsentAt: timestamp("trackingConsentAt"), trackingStoppedAt: timestamp("trackingStoppedAt"),
 }, table => [uniqueIndex("assignment_order_unique").on(table.orderId), index("assignment_rider_idx").on(table.riderUserId)]);
 
 export const notifications = mysqlTable("notifications", {

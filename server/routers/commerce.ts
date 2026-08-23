@@ -13,7 +13,13 @@ import { buildCheckoutMetadata } from "../payment";
 import { protectedProcedure, router } from "../_core/trpc";
 
 const selectedOptions = z.array(z.object({ groupId: z.string().min(1).max(64), choiceId: z.string().min(1).max(64) })).max(12);
-const addressInput = z.object({ label: z.string().trim().min(1).max(80), recipientName: z.string().trim().min(1).max(160), phone: z.string().trim().min(6).max(30), line1: z.string().trim().min(4).max(500), line2: z.string().trim().max(500).optional(), city: z.string().trim().min(2).max(120), state: z.string().trim().min(2).max(120), pincode: z.string().trim().min(3).max(20), deliveryInstructions: z.string().trim().max(500).optional(), isDefault: z.boolean().optional() });
+const coordinate = z.number().finite();
+export const addressInput = z.object({ label: z.string().trim().min(1).max(80), recipientName: z.string().trim().min(1).max(160), phone: z.string().trim().min(6).max(30), line1: z.string().trim().min(4).max(500), line2: z.string().trim().max(500).optional(), city: z.string().trim().min(2).max(120), state: z.string().trim().min(2).max(120), pincode: z.string().trim().min(3).max(20), deliveryInstructions: z.string().trim().max(500).optional(), isDefault: z.boolean().optional(), latitude: coordinate.min(-90).max(90).optional(), longitude: coordinate.min(-180).max(180).optional(), locationConsent: z.boolean().optional() }).superRefine((value, context) => {
+  const hasLatitude = value.latitude !== undefined;
+  const hasLongitude = value.longitude !== undefined;
+  if (hasLatitude !== hasLongitude) context.addIssue({ code: z.ZodIssueCode.custom, message: "Save both latitude and longitude together." });
+  if (hasLatitude && !value.locationConsent) context.addIssue({ code: z.ZodIssueCode.custom, message: "Location consent is required to save map coordinates." });
+});
 
 async function requiredDb() {
   const db = await getDb();
@@ -66,10 +72,11 @@ export const commerceRouter = router({
   }),
   addresses: router({
     list: protectedProcedure.query(async ({ ctx }) => (await requiredDb()).select().from(addresses).where(eq(addresses.userId, ctx.user.id)).orderBy(desc(addresses.isDefault), desc(addresses.updatedAt))),
-    save: protectedProcedure.input(addressInput.extend({ id: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
+    save: protectedProcedure.input(addressInput.safeExtend({ id: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
       const db = await requiredDb();
       if (input.isDefault) await db.update(addresses).set({ isDefault: false }).where(eq(addresses.userId, ctx.user.id));
-      const values = { ...input, userId: ctx.user.id, line2: input.line2 || null, deliveryInstructions: input.deliveryInstructions || null, isDefault: input.isDefault ?? false };
+      const { latitude, longitude, locationConsent: _locationConsent, ...addressValues } = input;
+      const values = { ...addressValues, userId: ctx.user.id, line2: input.line2 || null, deliveryInstructions: input.deliveryInstructions || null, isDefault: input.isDefault ?? false, latitude: latitude === undefined ? null : String(latitude), longitude: longitude === undefined ? null : String(longitude), locationConsentAt: latitude === undefined ? null : new Date() };
       if (input.id !== undefined) {
         const { id, userId: _userId, ...update } = values;
         await db.update(addresses).set(update).where(and(eq(addresses.id, input.id), eq(addresses.userId, ctx.user.id)));

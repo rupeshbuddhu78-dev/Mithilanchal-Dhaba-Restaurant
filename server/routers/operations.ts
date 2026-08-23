@@ -11,9 +11,11 @@ import { hashPassword } from "../passwordAuth";
 import { localOpenId } from "../passwordAuth";
 import { hasPersistedMediaReference } from "../mediaSafety";
 import { protectedProcedure, router } from "../_core/trpc";
+import { ACTIVE_DELIVERY_STATUSES, canReadDeliveryTracking, isActiveDeliveryStatus, parseTrackingCoordinates } from "../trackingPolicy";
 
 async function requiredDb() { const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database is unavailable." }); return db; }
 const orderStatus = z.enum(ORDER_STATUSES);
+const coordinateInput = z.object({ latitude: z.number().finite().min(-90).max(90), longitude: z.number().finite().min(-180).max(180) });
 
 async function changeStatus(input: { orderId: number; status: z.infer<typeof orderStatus>; note?: string }, actorUserId: number) {
   const db = await requiredDb();
@@ -153,13 +155,46 @@ export const operationsRouter = router({
       if (profile) await db.update(riderProfiles).set(values).where(eq(riderProfiles.id, profile.id)); else await db.insert(riderProfiles).values(values);
       return { success: true };
     }),
+    updateTrackingLocation: protectedProcedure.input(coordinateInput.extend({ orderId: z.number().int().positive(), locationConsent: z.literal(true) })).mutation(async ({ ctx, input }) => {
+      requireRole(ctx, ["rider"]); const db = await requiredDb();
+      const [assignment] = await db.select({ assignment: riderAssignments, order: orders }).from(riderAssignments).innerJoin(orders, eq(riderAssignments.orderId, orders.id)).where(and(eq(riderAssignments.orderId, input.orderId), eq(riderAssignments.riderUserId, ctx.user.id), inArray(orders.status, [...ACTIVE_DELIVERY_STATUSES]))).limit(1);
+      if (!assignment) throw new TRPCError({ code: "FORBIDDEN", message: "Live tracking is available only for your active delivery." });
+      const now = new Date();
+      await db.transaction(async tx => {
+        await tx.update(riderAssignments).set({ lastLatitude: String(input.latitude), lastLongitude: String(input.longitude), lastLocationAt: now, trackingConsentAt: assignment.assignment.trackingConsentAt ?? now, trackingStoppedAt: null }).where(eq(riderAssignments.id, assignment.assignment.id));
+        const values = { userId: ctx.user.id, displayName: ctx.user.name || "Rider", lastLatitude: String(input.latitude), lastLongitude: String(input.longitude), lastLocationAt: now };
+        const [profile] = await tx.select().from(riderProfiles).where(eq(riderProfiles.userId, ctx.user.id)).limit(1);
+        if (profile) await tx.update(riderProfiles).set(values).where(eq(riderProfiles.id, profile.id)); else await tx.insert(riderProfiles).values(values);
+      });
+      return { success: true, locationUpdatedAt: now };
+    }),
+    stopTracking: protectedProcedure.input(z.object({ orderId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      requireRole(ctx, ["rider"]); const db = await requiredDb();
+      const [assignment] = await db.select().from(riderAssignments).where(and(eq(riderAssignments.orderId, input.orderId), eq(riderAssignments.riderUserId, ctx.user.id))).limit(1);
+      if (!assignment) throw new TRPCError({ code: "FORBIDDEN", message: "This delivery is not assigned to you." });
+      await db.update(riderAssignments).set({ trackingStoppedAt: new Date() }).where(eq(riderAssignments.id, assignment.id));
+      return { success: true };
+    }),
     updateStatus: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), status: z.enum(["out_for_delivery", "delivered"]), note: z.string().trim().max(500).optional() })).mutation(async ({ ctx, input }) => {
       requireRole(ctx, ["rider"]); const db = await requiredDb(); const [assignment] = await db.select().from(riderAssignments).where(and(eq(riderAssignments.orderId, input.orderId), eq(riderAssignments.riderUserId, ctx.user.id))).limit(1);
       if (!assignment) throw new TRPCError({ code: "FORBIDDEN", message: "This delivery is not assigned to you." });
       const result = await changeStatus(input, ctx.user.id);
       if (input.status === "out_for_delivery") await db.update(riderAssignments).set({ pickedUpAt: new Date() }).where(eq(riderAssignments.id, assignment.id));
-      if (input.status === "delivered") await db.update(riderAssignments).set({ deliveredAt: new Date() }).where(eq(riderAssignments.id, assignment.id));
+      if (input.status === "delivered") await db.update(riderAssignments).set({ deliveredAt: new Date(), trackingStoppedAt: new Date() }).where(eq(riderAssignments.id, assignment.id));
       return result;
+    }),
+  }),
+  tracking: router({
+    current: protectedProcedure.input(z.object({ orderId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const db = await requiredDb();
+      const [record] = await db.select({ order: orders, assignment: riderAssignments }).from(orders).leftJoin(riderAssignments, eq(riderAssignments.orderId, orders.id)).where(eq(orders.id, input.orderId)).limit(1);
+      if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "Order not found." });
+      if (!canReadDeliveryTracking({ orderUserId: record.order.userId, riderUserId: record.assignment?.riderUserId, requesterUserId: ctx.user.id, requesterRole: ctx.user.role })) throw new TRPCError({ code: "FORBIDDEN", message: "You cannot view this delivery location." });
+      const isActive = isActiveDeliveryStatus(record.order.status);
+      const riderLatitude = Number(record.assignment?.lastLatitude);
+      const riderLongitude = Number(record.assignment?.lastLongitude);
+      const riderLocation = isActive && record.assignment?.trackingConsentAt && !record.assignment.trackingStoppedAt && Number.isFinite(riderLatitude) && Number.isFinite(riderLongitude) ? { latitude: riderLatitude, longitude: riderLongitude, updatedAt: record.assignment.lastLocationAt } : null;
+      return { orderId: record.order.id, orderNo: record.order.orderNo, status: record.order.status, destination: parseTrackingCoordinates(record.order.deliveryAddressSnapshot), riderLocation };
     }),
   }),
 });
