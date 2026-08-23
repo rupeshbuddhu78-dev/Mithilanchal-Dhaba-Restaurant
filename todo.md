@@ -86,4 +86,5 @@
 - [ ] Continue approved delivery-navigation and protected customer/admin live-map validation only with existing authorized TEST data unless the user explicitly approves another TEST order.
 - [ ] Use the user-authorized private credential only for required protected TEST/admin/rider validation steps, without recording, disclosing, or committing it.
 - [ ] Capture explicit non-secret confirmation that the protected reset mutation succeeded only for TEST E2E Customer 20260822, then repeat clean-session customer verification.
+- [ ] Add non-secret server-side diagnostics for a failed protected TEST customer reset mutation, then resolve the observed production failure without touching real accounts or records.
 - [x] Add explicit inline success, error, and pending feedback to the protected customer reset control so TEST-only reset outcomes can be verified without relying on transient toasts.

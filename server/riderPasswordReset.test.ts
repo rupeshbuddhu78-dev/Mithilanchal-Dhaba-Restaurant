@@ -48,4 +48,14 @@ describe("administrator rider password reset", () => {
     await expect(verifyPassword("another-temporary-password", update.passwordHash ?? null)).resolves.toBe(true);
     expect(auditValues).toHaveBeenCalledWith(expect.objectContaining({ action: "customer.password_reset", metadata: { targetRole: "customer" } }));
   });
+
+  it("logs only non-secret diagnostics and returns a safe error when a customer reset transaction fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    auditValues.mockRejectedValueOnce(Object.assign(new Error("audit write unavailable"), { code: "ER_LOCK_WAIT_TIMEOUT" }));
+    const caller = operationsRouter.createCaller({ user: { id: 5, role: "admin" }, req: {}, res: {} } as any);
+    await expect(caller.admin.resetCustomerPassword({ customerUserId: 77, password: "private-test-password" })).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR", message: "Customer password could not be reset. Please try again." });
+    expect(errorSpy).toHaveBeenCalledWith("[Customer password reset]", { message: "audit write unavailable", code: "ER_LOCK_WAIT_TIMEOUT" });
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("private-test-password");
+    errorSpy.mockRestore();
+  });
 });
